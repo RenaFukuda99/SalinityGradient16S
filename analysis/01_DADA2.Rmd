@@ -60,6 +60,25 @@ plotQualityProfile(forward_reads[random_samples])
 plotQualityProfile(reverse_reads[random_samples])
 ```
 
+# Prepare placeholder for filtered reads
+```{r prep_filtered_seqs}
+# Make vector of our samples, extract sample name from files
+samples <- sapply(strsplit(basename(forward_reads), "_"),`[`,1)
+head(samples)
+
+# Place filtered reads into filtered fastq paths
+filt_fastq_path <- "/local/workdir/rf384/git_repos/SalinityGradient16S/data/01_DADA2/02_filtered_fastqs"
+
+# Create 2 vars - one for forward, one for reverse
+filt_forward_reads <- file.path(filt_fastq_path, paste0(samples, "_R1_filtered.fastq.gz"))
+filt_reversereads <- file.path(filt_fastq_path, paste0(samples, "_R2_filtered.fastq.gz"))
+```
+
+
+# Filter and trim reads
+```{r filter_and_trim}
+out <- filterAndTrim(forward_reads, )
+```
 
 
 
