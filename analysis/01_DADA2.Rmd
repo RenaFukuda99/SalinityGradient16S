@@ -13,6 +13,11 @@ knitr::opts_chunk$set(echo = TRUE,
 
 ```
 
+```{r set_seed, include=FALSE}
+# Set my seed - can choose any number
+set.seed(23598)
+```
+
 # Goals of this file
 1. Use raw fastq files and generate quality plots to assess quality of reads.
 2. Filter and trim out bad seqs and bases from seq files.
@@ -36,7 +41,7 @@ library(dada2)
 raw_fastq_path <- "data/01_DADA2/01_raw_gzip_fastqs"
 
 # What files are in this path? 
-list.files(raw_fastq_path)
+head(raw_fastq_path)
 
 # How many files are there?
 str(list.files(raw_fastq_path))
@@ -71,14 +76,32 @@ filt_fastq_path <- "/local/workdir/rf384/git_repos/SalinityGradient16S/data/01_D
 
 # Create 2 vars - one for forward, one for reverse
 filt_forward_reads <- file.path(filt_fastq_path, paste0(samples, "_R1_filtered.fastq.gz"))
-filt_reversereads <- file.path(filt_fastq_path, paste0(samples, "_R2_filtered.fastq.gz"))
+filt_reverse_reads <- file.path(filt_fastq_path, paste0(samples, "_R2_filtered.fastq.gz"))
 ```
 
 
 # Filter and trim reads
+Parameters of filter and trim depend on the dataset
+- maxN: number of N bases. Default is $0$, removes all Ns from dataset.
+- maxEE: quality filtering threshold applied to expected errrors. Default is $2$, allows up to $2$ expected errors. There are two values - the first value is for forward reads, the second for reverse.  
+- trimLeft: Number of bases to remove from beginning of the read (here $3$). 
+- trunQ: Truncate reads at the first instance of a quality score less than or equal to truncQ.
+
 ```{r filter_and_trim}
-out <- filterAndTrim(forward_reads, )
+# Assign a vector to filtered reads
+# Trim out poor bases and first 3 bps on F reads
+# Write out fastq files
+filtered_reads <- filterAndTrim(fwd = forward_reads, filt = filt_forward_reads, 
+                     rev = reverse_reads, filt.rev = filt_reverse_reads,
+                     maxEE = c(2,2), trimLeft = 3, truncQ = 2, rm.phix = TRUE,
+                     compress = TRUE) #multithread = TRUE
 ```
 
 
+
+# Session information
+```{r session_info}
+# Ensure reproducibility
+devtools::session_info()
+```
 
