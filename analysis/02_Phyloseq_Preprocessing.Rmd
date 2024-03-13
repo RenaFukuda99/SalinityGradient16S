@@ -1,0 +1,77 @@
+---
+title: "Phyloseq_Preprocessing"
+author: "Rena Fukuda"
+output: html_document
+date: "`r Sys.Date()`"
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      fig.align = "center",
+                      fig.path = "figures/02_Phyloseq_Preprocessing")
+```
+
+# Goals of this file
+
+Process data into phyloseq object. 
+Removing the following: 
+1. Mitochondria 
+2. Chloroplasts 
+3. Samples without enough reads
+
+Finally, write a phyloseq object. 
+
+# Load libraries
+
+```{r load_libraries}
+#BiocManager::install("phyloseq")
+
+library(devtools)
+library(phyloseq)
+library(tidyverse)
+```
+
+# Load data
+## Load ASV Table
+```{r load_asv_table}
+# Load in data
+load("data/01_DADA2/ASV_counts.RData")
+
+# Look at first five cols
+head(asv_tab[,1:5])
+
+# Fix names
+sample_names <- colnames(asv_tab)
+samples_fixed <- sapply(strsplit(basename(sample_names), "_"), `[`,1) 
+head(samples_fixed)
+
+# Rewrite ASV count file to fix names
+colnames(asv_tab) <- samples_fixed
+
+# Check structure
+str(asv_tab)
+```
+
+## Load Taxonomy Table
+```{r load_tax_table}
+tax_df <- read.table("data/01_DADA2/ASV_taxonomy.tsv", sep = "\t", header = TRUE)
+head(tax_df)
+
+tax_df_new <- tax_df[,-1]
+rownames(tax_df_new) <- tax_df[,1]
+tax_df_new <- as.matrix(tax_df_new)
+```
+
+## Load Track Read Counts
+```{r load_track_counts}
+trackreads_df <- read.table("data/01_DADA2/ASV_taxonomy.tsv", sep = "\t", header = TRUE)
+head(trackreads_df)
+```
+
+# Handoff to phyloseq
+```{r handoff_phyloseq}
+
+```
+
