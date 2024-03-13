@@ -66,12 +66,58 @@ tax_df_new <- as.matrix(tax_df_new)
 
 ## Load Track Read Counts
 ```{r load_track_counts}
-trackreads_df <- read.table("data/01_DADA2/ASV_taxonomy.tsv", sep = "\t", header = TRUE)
-head(trackreads_df)
+# Load data
+load("data/01_DADA2/track_read_counts.RData")
+
+# Look at data
+head(track_counts_df)
+dim(track_counts_df)
+```
+
+```{r load_metadata}
+# Load in metadata
+metadata_df <- read.csv("data/02_Phyloseq/metadata.csv")
+
+# Look at data
+dim(metadata_df)
+colnames(metadata_df)
+
+# Merge metadata with track reads
+metadata_track_df <- metadata_df %>% 
+  left_join(., track_counts_df, by = "names") %>% 
+  dplyr::select(-X)
+
+# Intuition check 
+head(metadata_track_df)
+
+# Update row names to be sample names
+# Before
+row.names(metadata_track_df)
+# Rewrite
+row.names(metadata_track_df) <- metadata_track_df$names
+# Check
+row.names(metadata_track_df)
+
+# Intuition check
+head(metadata_track_df)
+
 ```
 
 # Handoff to phyloseq
 ```{r handoff_phyloseq}
+# Double check
+dim(asv_tab)
+dim(tax_df_new)
 
+# Intuition check
+stopifnot(row.names(asv_tab) == row.names(tax_df_new))
+
+# Construct phyloseq object
+raw_physeq <- phyloseq(otu_table(asv_tab, taxa_are_rows = TRUE),
+                       sample_data(metadata_track_df),
+                       tax_table(tax_df_new)) 
+
+# Save raw physeq
+save(raw_physeq, file = "data/02_Phyloseq/raw_physeq.RData")
 ```
 
