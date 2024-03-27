@@ -10,7 +10,7 @@ editor_options:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,
                       fig.align = "center",
-                      fig.path = "figures/04_Biodiversity/")
+                      fig.path = "../figures/04_Biodiversity/")
 ```
 
 # Setting the Environment
@@ -158,4 +158,35 @@ ggplot(data = iNEXT_man_rf, aes(x = m, y= qD, color = station, group = names)) +
   scale_color_manual(values = station_colors)
 ```
 
+# Environmental variable check
+## Var check
+```{r environmental_pairs, fig.width =6, fig.height=6}
+head(metadata_df)
+
+env_df <- 
+  metadata_df %>%
+  dplyr::select(names, water_tempC, DO_mgL)
+
+head(env_df)
+
+pairs(dplyr::select(env_df, -names), upper.panel = NULL)
+```
+
+## Diversity vs salinity
+```{r div_vs_salinity, fig.width =6, fig.height=6}
+iNEXT_manual_df %>%
+  dplyr::filter(Method == "Observed") %>%
+  ggplot(aes(x = salinity_psu, y= qD)) +
+  facet_wrap(~Order.q, scales = "free") +
+  geom_point(aes(color = station)) +
+  stat_smooth(method = "lm", formula = y ~ poly(x,2) ) + 
+  labs(x = "Salinity (psu)", y="# of ASVs") +
+  scale_color_manual(values = station_colors) +
+  theme(legend.position = "bottom") 
+```
+
+# Session information
+```{r session_info}
+devtools::session_info()
+```
 
