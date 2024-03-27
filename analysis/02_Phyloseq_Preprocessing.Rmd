@@ -17,20 +17,21 @@ knitr::opts_chunk$set(echo = TRUE,
 
 Process data into phyloseq object. 
 Removing the following: 
+
 1. Mitochondria 
 2. Chloroplasts 
 3. Samples without enough reads
+4. ASVs from negative controls
 
-Finally, write a phyloseq object. 
+Then, evaluate accuracy by looking at mock community samples. 
+Finally, write out data file of phyloseq output, which will be saved in
+"data/Phyloseq/raw_preprocessed_physeq.RData"
 
 # Load libraries
 
 ```{r load_libraries}
 #BiocManager::install("phyloseq")
-
-library(devtools)
-library(phyloseq)
-library(tidyverse)
+pacman::p_load(devtools, phyloseq, tidyverse, dada2, install = FALSE)
 ```
 
 # Load data
@@ -161,6 +162,7 @@ ntaxa(no_chloro_mito_physeq)/ntaxa(raw_physeq)
 # Evaluate and remove control samples
 
 Take a look at negative controls and decide whether or not to remove ASVs found in controls.
+
 1. Negative controls.
 2. ASVs found within negative controls and their distribution in samples.
 3. Evaluate mock community
@@ -230,6 +232,139 @@ total_ASVs_rm
 
 ```
 
+# Evaluate accuracy in the Mock community
+- make a mock phyloseq object
+- load in the standard fasta sequences of the mock community
+- test for differences between the two
+
+```{r mock_community}
+# Make mock phyloseq object
+mock_physeq <- no_mito_chloro_ctrl_physeq %>%
+  subset_samples(., names == "MockZymoPos") %>%
+  prune_taxa(taxa_sums(.) > 0 , .)
+
+# Inspect it
+mock_physeq
+tax_table(mock_physeq)
+
+# Write a message summarizing 
+cat("DADA2 inferred", ntaxa(mock_physeq), "ASVs present in the mock community.")
+
+# Load in mock refernce sequence from Zymo
+mock_ref <- getSequences("data/02_Phyloseq/mock_amplicons.fasta")
+names(mock_ref)
+
+# Pull out seqs from mock community
+mock_seqs <- mock_physeq %>%
+  tax_table() %>%
+  data.frame() %>%
+  dplyr::select(ASV, ASVseqs)
+
+# Inspect
+mock_seqs
+
+# Which ASVs match the reference? (match is 0/1 if match)
+match_ASVs <- mock_seqs %>% 
+  rowwise() %>%
+  mutate(Match = any(grep(ASVseqs, mock_ref))) %>%
+  pull(ASV)
+
+cat(length(match_ASVs), "ASVs were exact matches to the expected reference sequence")
+
+# How many seqs were in mock?
+mock_seq_depth <- mock_physeq %>% 
+  otu_table() %>%
+  data.frame() %>%
+  colSums()
+
+mock_seq_depth
+
+# Who is in seq mock comm?
+mock_physeq %>%
+  tax_table() %>%
+  data.frame() %>%
+  dplyr::select(Genus, Species)
+names(mock_ref)
+```
+
+What can we conclude about the mock comm?
+```{r physeq_wo_mock}
+no_ctrls_mock_mito_chloro <- no_mito_chloro_ctrl_physeq %>% 
+  subset_samples(., names != "MockZymoPos") %>%
+  subset_taxa(., !(ASV %in% match_ASVs))
+
+no_ctrls_mock_mito_chloro
+
+# Intuition check 
+num_ASVs_mock = ntaxa(no_mito_chloro_ctrl_physeq) - ntaxa(no_ctrls_mock_mito_chloro)
+num_ASVs_mock
+
+stopifnot(num_ASVs_mock == 8)
+```
+
+# Evalulate te sequencing depth
+```{r seq_depth}
+# Curr data obj
+no_ctrls_mock_mito_chloro
+
+# Library depth per sample
+seq_sums_df <- no_ctrls_mock_mito_chloro %>%
+  otu_table() %>%
+  colSums() %>%
+  data.frame() %>%
+  rownames_to_column(var = "names") %>% 
+  left_join(., metadata_track_df, by = "names") 
+
+# Check
+dim(seq_sums_df)
+head(seq_sums_df)
+
+# Rename second col
+colnames(seq_sums_df)[2] <- "Totalseqs"
+
+# Show depth of samples
+seq_sums_df %>%
+  dplyr::select(names, Totalseqs) %>%
+  arrange(Totalseqs) %>%
+  head
+
+# Plot it
+seq_sums_df %>%
+  ggplot(aes(x = reorder(names, Totalseqs), y=Totalseqs, fill = station)) +
+  geom_bar(stat = "Identity") 
+
+# Density plot
+seq_sums_df %>%
+  ggplot(aes(Totalseqs, fill = station)) +
+  geom_density(alpha = 0.5) 
+  
+```
+
+# Remove samples with few reads
+```{r remove_low_read_samp}
+# Min seq depth
+min(sample_sums(no_ctrls_mock_mito_chloro))
+
+# Remove 20210615-MA-SCB2F 
+row_preprocessed_physeq <- no_ctrls_mock_mito_chloro %>%
+  subset_samples(., names != "20210615-MA-SCB2F" )
+
+# Double check min seq depth
+min(sample_sums(row_preprocessed_physeq))
+```
+
+# Save preprocessed phyloseq obj
+```{r save_physeq}
+save(row_preprocessed_physeq, file = "data/02_Phyloseq/raw_preprocessed_physeq.RData")
+
+```
+
+
+# Session Information 
+```{r session-info}
+# Ensure reproducibility 
+devtools::session_info()
+```
 
 
 
