@@ -1,0 +1,95 @@
+---
+title: "Phylogenetic Tree Inspection & Rooting"
+output: 
+  html_document:
+    toc: yes
+    toc_float: yes
+date: "`r Sys.Date()`"
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      fig.align = "center", 
+                      fig.path = "../figures/03_Phylogenetic_Tree/")
+
+```
+
+# Goals
+
+1. Load the fasttree unrooted tree.
+2. Add tree to phyloseq object.
+3. Visualize and inspect tree with ggtree.
+4. Prune ASVs if needed.
+5. Combine new tree with phyloseq object.
+6. Save 2 phyloseq objects: 1. Unrooted phyloseq object, 2. Rooted phyloseq object
+
+# Set the environment
+## Set seed
+```{r set_seed, include=FALSE}
+# Set my seed - can choose any number
+set.seed(23598)
+```
+
+## Load packages
+```{r load_packages}
+pacman::p_load(tidyverse, phyloseq, ggtree, phytools, install=FALSE)
+```
+
+## Load data
+```{r load_data}
+# Load phyloseq object
+load("data/02_Phyloseq/raw_preprocessed_physeq.RData")
+row_preprocessed_physeq
+
+# Load in tree
+unrooted_tree <- read.tree("data/03a_Phylogenetic_Tree/ASVs_unrooted.tree")
+unrooted_tree
+str(unrooted_tree)
+```
+
+# Merge Phyloseq
+```{r merge_physeq}
+# Intuition check
+stopifnot(ntaxa(row_preprocessed_physeq) == ntaxa(unrooted_tree)) 
+
+# Merge tree with phyloseq
+unrooted_physeq <- merge_phyloseq(row_preprocessed_physeq, unrooted_tree)
+```
+
+# Plot tree with ggtree
+```{r plot_tree_unrooted}
+# Make a basic tree
+kingdom_node_tree <- ggtree(unrooted_physeq) + 
+  # color by kingdom
+  geom_tippoint(mapping = aes(color = Kingdom)) +
+  scale_color_manual(values = c("goldenrod1", "cornflowerblue", "gray")) +
+  labs(title = "Unrooted Tree") +
+  # add node label
+  geom_text(aes(label = node), hjust = -0.5, vjust = -0.5, size = 2) +
+  theme(legend.position = "bottom") 
+```
+
+## Evaluate long branch
+```{r eval_long_branch}
+# View clade 2537
+viewClade(kingdom_node_tree, node = 2537) +
+  labs(title = "Unrooted Tree: Node 2537") 
+
+# Look into clade
+viewClade(kingdom_node_tree, node = 5208) +
+  labs(title = "Unrooted Tree: Node 2537") + 
+  geom_text(aes(label = ASV))
+
+# Pull out information about ASV
+unrooted_physeq %>%
+  subset_taxa(., ASV == "ASV_456") %>%
+  tax_table %>%
+  data.frame
+
+```
+
+
+# Session information
+
