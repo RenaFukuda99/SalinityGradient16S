@@ -46,7 +46,7 @@ row_preprocessed_physeq
 # Load in tree
 unrooted_tree <- read.tree("data/03a_Phylogenetic_Tree/ASVs_unrooted.tree")
 unrooted_tree
-str(unrooted_tree)
+#str(unrooted_tree)
 ```
 
 # Merge Phyloseq
@@ -69,6 +69,8 @@ kingdom_node_tree <- ggtree(unrooted_physeq) +
   # add node label
   geom_text(aes(label = node), hjust = -0.5, vjust = -0.5, size = 2) +
   theme(legend.position = "bottom") 
+
+kingdom_node_tree
 ```
 
 ## Evaluate long branch
@@ -89,7 +91,61 @@ unrooted_physeq %>%
   data.frame
 
 ```
+Alphaproteobacteria with few counts - mitochondria associated.
+
+# Remove ASV 456
+```{r remove_ASV_456}
+# Function from Joey McMurdie: https://github.com/joey711/phyloseq/issues/652
+pop_taxa = function(physeq, badTaxa){
+  allTaxa <-  taxa_names(physeq)
+  allTaxa <- allTaxa[!(allTaxa %in% badTaxa)]
+  return(prune_taxa(allTaxa, physeq))}
+
+# Use pop taxa function
+# Recreate phyloseq object w/o ASV_456
+unrooted_physeq_rm456 <- unrooted_physeq %>%
+  pop_taxa(., "ASV_456")
+
+# Intuition check
+ntaxa(unrooted_physeq) - ntaxa(unrooted_physeq_rm456)
+
+# Plot it
+ggtree(unrooted_physeq_rm456) + 
+  geom_tippoint(mapping = aes(color = Kingdom))
+```
+
+# Midroot tree
+```{r midroot_tree}
+# Is the tree rooted?
+new_unrooted_tree <- phy_tree(unrooted_physeq_rm456)
+is.rooted(new_unrooted_tree)
+
+
+# Root the tree
+midpoint_rooted_tree <- midpoint.root(new_unrooted_tree)
+is.rooted(midpoint_rooted_tree)
+
+# Assign to a new phyloseq object: merging subsetted phyloseq with new rooted tree
+# Create phyloseq object w/o ASV 456
+physeq_rm456 <- row_preprocessed_physeq %>%
+  subset_taxa(ASV != "ASV_456")
+
+# Merge tree with new physeq
+midroot_physeq_rm456 <- merge_phyloseq(physeq_rm456, midpoint_rooted_tree)
+midroot_physeq_rm456
+
+# Inspect tree
+ggtree(midroot_physeq_rm456) + 
+  geom_tippoint(mapping = aes(color = Kingdom))
+```
+
+# Export physeq objects
+```{r save_physeq}
+save(list = c("unrooted_physeq_rm456", "midroot_physeq_rm456"), 
+     file = "data/03a_Phylogenetic_Tree/Phytree_Preprocessed_Physeq.RData")
+```
 
 
 # Session information
-
+```{r session_info}
+devtools::session_info()
