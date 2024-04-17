@@ -1,7 +1,8 @@
 ---
 title: "Infer ASVs with DADA2"
-output: html_document
-  toc: yes
+output: 
+  html_document:
+    toc: yes
     toc_float: 
       collapsed: no
       smooth_scroll: yes
