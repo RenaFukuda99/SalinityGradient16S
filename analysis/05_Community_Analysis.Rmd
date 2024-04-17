@@ -54,6 +54,7 @@ station_colors <- c(
 ```
 
 # Explore read counts
+## Raw read depth
 ```{r calc_seq_depth}
 # Calculate total number of reads per sample
 raw_total_seqs_df <- midroot_physeq_rm456 %>%
@@ -71,11 +72,126 @@ ggplot(raw_total_seqs_df, aes(x = TotalSeqs)) +
   theme_bw()
 ```
 
+## Remove low sequence sample
+```{r rm_low_seq_sample}
+# Remove 20210615-MA-ABB2F from Biodiversity analysis
+raw_rooted_physeq <-  midroot_physeq_rm456 %>%
+  subset_samples(names != "20210615-MA-ABB2F") %>%
+  # make sure any asvs unqiue to sample are removed
+  prune_taxa(taxa_sums(.) >0, .)
+
+raw_rooted_physeq
+
+# What is the minimum number of sequences?
+raw_rooted_physeq %>%
+  sample_sums() %>%
+  min()
+```
 
 ## Normalize read counts
+```{r scale_reads}
+# Function to scale reads: http://deneflab.github.io/MicrobeMiseq/ 
+# Scales reads by 
+# 1) taking proportions
+# 2) multiplying by a given library size of n
+# 3) rounding 
+# Default for n is the minimum sample size in your library
+# Default for round is floor
+
+matround <- function(x){trunc(x+0.5)}
+
+scale_reads <- function(physeq, n = min(sample_sums(physeq)), round = "round") {
+  
+  # transform counts to n
+  physeq.scale <- transform_sample_counts(physeq, function(x) {(n * x/sum(x))})
+  
+  # Pick the rounding functions
+  if (round == "floor"){
+    otu_table(physeq.scale) <- floor(otu_table(physeq.scale))
+  } else if (round == "round"){
+    otu_table(physeq.scale) <- round(otu_table(physeq.scale))
+  } else if (round == "matround"){
+    otu_table(physeq.scale) <- matround(otu_table(physeq.scale))
+  }
+  
+  # Prune taxa and return new phyloseq object
+  physeq.scale <- prune_taxa(taxa_sums(physeq.scale) > 0, physeq.scale)
+  return(physeq.scale)
+}
+```
+
+## Scale reads and check the distribution of the seq depth
+Could also normalize by rarefaction
+```{r scale_physeq}
+min(sample_sums(raw_rooted_physeq))
+
+# Scale reads by above function
+scaled_rooted_physeq <- 
+  raw_rooted_physeq %>%
+  scale_reads(round = "matround") 
+
+# Calculate read depth
+scaled_total_seqs_df <- 
+  scaled_rooted_physeq %>%
+  sample_sums() %>%
+  data.frame
+
+colnames(scaled_total_seqs_df) <- "TotalSeqs"
+
+# Check the range of the data
+min_seqs <- min(scaled_total_seqs_df$TotalSeqs)
+max_seqs <- max(scaled_total_seqs_df$TotalSeqs)
+range = max_seqs - min_seqs
+
+# Plot distribution
+ggplot(scaled_total_seqs_df, aes(x = TotalSeqs)) +
+  geom_histogram(bins = 50) +
+  scale_x_continuous(limits = c(0,10000)) +
+  labs(title = "Scaled Sequencing Depth Distribution") +
+  theme_bw()
+```
 
 # Calculate & visualize community dissimilarity
+Exploratory analyses using unconstrained ordination methods like PCoA.
+
 ## Sorenson PCoA
+```{r sorenson_pcoa}
+# Calculate sorenson dissimilarity
+scaled_soren_pcoa <- ordinate(
+  physeq = scaled_rooted_physeq,
+  method = "PCoA",
+  distance = "bray",
+  binary = TRUE
+)
+
+#str(scaled_soren_pcoa)
+
+# Plot it
+plot_ordination(
+  physeq = scaled_rooted_physeq,
+  ordination = scaled_soren_pcoa,
+  color = "station",
+  title = "Sorenson PCoA") +
+  scale_color_manual(values = station_colors)
+
+# PERMANOVA of Sorenson
+# Make a triangle distance matrix for sorenson dissimilarity
+soren_dist <- phyloseq::distance(scaled_rooted_physeq, 
+                   method = "bray",
+                   binary = TRUE)
+str(soren_dist)
+
+# Metadata
+metadata_df <- 
+  scaled_rooted_physeq %>%
+  sample_data() %>%
+  data.frame
+
+# Run PERMANOVA
+# Testing if the centroids of the data are similar or different 
+adonis2(soren_dist ~ station, data = metadata_df)
+```
+
 
 ## Bray-Curtis PCoA
 
@@ -84,6 +200,8 @@ ggplot(raw_total_seqs_df, aes(x = TotalSeqs)) +
 ## Bray-Curtis NMDS
 
 # Test for statistical significance with PERMANOVA and betadispR
+
+
 # Session info
 ```{r session_info}
 devtools::session_info()
