@@ -44,7 +44,7 @@ load("data/02_Phyloseq/raw_preprocessed_physeq.RData")
 row_preprocessed_physeq
 
 # Load in tree
-unrooted_tree <- read.tree("data/03a_Phylogenetic_Tree/ASVs_unrooted.tree")
+unrooted_tree <- read.tree("data/03_Phylogenetic_Tree/ASVs_unrooted.tree")
 unrooted_tree
 #str(unrooted_tree)
 ```
@@ -142,7 +142,7 @@ ggtree(midroot_physeq_rm456) +
 # Export physeq objects
 ```{r save_physeq}
 save(list = c("unrooted_physeq_rm456", "midroot_physeq_rm456"), 
-     file = "data/03a_Phylogenetic_Tree/Phytree_Preprocessed_Physeq.RData")
+     file = "data/03_Phylogenetic_Tree/Phytree_Preprocessed_Physeq.RData")
 ```
 
 

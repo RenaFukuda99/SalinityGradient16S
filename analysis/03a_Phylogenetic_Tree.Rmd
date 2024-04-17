@@ -53,7 +53,7 @@ ASV_seq_fasta <- c(rbind(ASV_seq_df$ASV, ASV_seq_df$ASVseqs))
 head(ASV_seq_fasta)
 
 # Write to file
-write(ASV_seq_fasta, "data/03a_Phylogenetic_Tree/Preprocessed_ASVs.fasta")
+write(ASV_seq_fasta, "data/03_Phylogenetic_Tree/Preprocessed_ASVs.fasta")
 ```
 
 # Align the 16S sequences with MAFFT
@@ -64,7 +64,7 @@ write(ASV_seq_fasta, "data/03a_Phylogenetic_Tree/Preprocessed_ASVs.fasta")
 export PATH=/programs/mafft/bin:$PATH
 
 # Change directories to provide fasta file we made above
-cd data/03a_Phylogenetic_Tree/
+cd data/03_Phylogenetic_Tree/
 pwd
 
 # Set seed 
@@ -85,7 +85,7 @@ pwd
 export PATH=/programs/FastTree-2.1.11:$PATH
 
 # Change directories to provide aligned fasta file 
-cd data/03a_Phylogenetic_Tree/
+cd data/03_Phylogenetic_Tree/
 pwd
 
 # Run FastTree2 to generate phylogenetic tree
